@@ -8,8 +8,12 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/webp', 'a
 const DELIVERY_METHODS = ['mail_check', 'pickup_business_office'];
 
 // Public: submit a reimbursement request with one or more receipt attachments.
-// Uses Vercel Blob for storage; falls back to no-files if not configured
-// (BLOB_READ_WRITE_TOKEN unset), so local dev works without it.
+// Uses Vercel Blob for storage. On Vercel, a project with a connected Blob
+// store authenticates via OIDC (BLOB_STORE_ID + an auto-injected OIDC
+// token) with no manual secret needed; BLOB_READ_WRITE_TOKEN is only for
+// local dev or projects not using the OIDC connection. If neither is
+// present, uploads are rejected outright rather than silently dropped.
+const BLOB_CONFIGURED = Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 export async function POST(request) {
   const formData = await request.formData();
   const parent_name = formData.get('parent_name');
@@ -43,32 +47,43 @@ export async function POST(request) {
     return NextResponse.json({ error: `Please attach at most ${MAX_FILES} files.` }, { status: 400 });
   }
 
-  if (files.length > 0 && !process.env.BLOB_READ_WRITE_TOKEN) {
-    console.error('Reimbursement submitted with files but BLOB_READ_WRITE_TOKEN is not set.');
+  if (files.length > 0 && !BLOB_CONFIGURED) {
+    console.error('Reimbursement submitted with files but Blob storage is not configured (no BLOB_READ_WRITE_TOKEN or BLOB_STORE_ID).');
     return NextResponse.json(
       { error: 'Receipt uploads are temporarily unavailable. Please try again shortly, or contact the PA treasurer.' },
       { status: 500 }
     );
   }
 
+  for (const file of files) {
+    if (file.size > MAX_FILE_BYTES) {
+      return NextResponse.json({ error: `"${file.name}" is over the 10MB limit.` }, { status: 400 });
+    }
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        { error: `"${file.name}" must be a JPG, PNG, HEIC, WEBP, or PDF file.` },
+        { status: 400 }
+      );
+    }
+  }
+
   const receiptUrls = [];
   if (files.length > 0) {
-    const { put } = await import('@vercel/blob');
-    for (const file of files) {
-      if (file.size > MAX_FILE_BYTES) {
-        return NextResponse.json({ error: `"${file.name}" is over the 10MB limit.` }, { status: 400 });
+    try {
+      const { put } = await import('@vercel/blob');
+      for (const file of files) {
+        const blob = await put(`receipts/${Date.now()}-${file.name}`, file, {
+          access: 'public',
+          addRandomSuffix: true,
+        });
+        receiptUrls.push(blob.url);
       }
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        return NextResponse.json(
-          { error: `"${file.name}" must be a JPG, PNG, HEIC, WEBP, or PDF file.` },
-          { status: 400 }
-        );
-      }
-      const blob = await put(`receipts/${Date.now()}-${file.name}`, file, {
-        access: 'public',
-        addRandomSuffix: true,
-      });
-      receiptUrls.push(blob.url);
+    } catch (err) {
+      console.error('Vercel Blob upload failed:', err);
+      return NextResponse.json(
+        { error: 'Receipt upload failed. Please try again shortly, or contact the PA treasurer.' },
+        { status: 500 }
+      );
     }
   }
 
