@@ -6,7 +6,7 @@ export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 // Triggered daily by Vercel Cron (see vercel.json). Sends a reminder email
-// to every parent whose slot is tomorrow and hasn't been reminded yet.
+// to every parent whose slot is 2 days out and hasn't been reminded yet.
 export async function GET(request) {
   const authHeader = request.headers.get('authorization');
   if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -16,10 +16,11 @@ export async function GET(request) {
   const { rows } = await query(
     `select
        su.id, su.parent_name, su.parent_email, su.cancel_token,
-       s.id as slot_id, s.title, s.category, s.event_date::text as event_date, s.start_time, s.end_time, s.location
+       s.id as slot_id, s.title, s.category, s.event_date::text as event_date, s.start_time, s.end_time, s.location,
+       s.contact_name, s.contact_email, s.contact_phone
      from signups su
      join slots s on s.id = su.slot_id
-     where s.event_date = current_date + interval '1 day'
+     where s.event_date = current_date + interval '2 days'
        and su.reminder_sent_at is null`
   );
 
@@ -39,6 +40,9 @@ export async function GET(request) {
       start_time: row.start_time,
       end_time: row.end_time,
       location: row.location,
+      contact_name: row.contact_name,
+      contact_email: row.contact_email,
+      contact_phone: row.contact_phone,
     };
     try {
       await sendSignupReminder({ slot, signup });

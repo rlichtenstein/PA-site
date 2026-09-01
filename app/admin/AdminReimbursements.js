@@ -3,6 +3,14 @@
 import { useEffect, useState } from 'react';
 
 const STATUSES = ['pending', 'approved', 'paid', 'denied'];
+const DELIVERY_LABELS = {
+  mail_check: 'Mail check',
+  pickup_business_office: 'Hold for pick-up in business office',
+};
+
+function isImageUrl(url) {
+  return /\.(jpe?g|png|webp|heic)(\?|$)/i.test(url);
+}
 
 export default function AdminReimbursements() {
   const [items, setItems] = useState(null);
@@ -57,9 +65,34 @@ export default function AdminReimbursements() {
               <p className="slot-meta">
                 {r.parent_name} • {r.parent_email} {r.parent_phone ? `• ${r.parent_phone}` : ''}
               </p>
+              {r.address && <p className="muted">{r.address}</p>}
+              {r.expense_date && (
+                <p className="muted">Expense date: {new Date(`${r.expense_date}`).toLocaleDateString()}</p>
+              )}
+              <p className="muted">
+                {DELIVERY_LABELS[r.delivery_method] || r.delivery_method}
+                {' • '}
+                Receipt attached: {r.receipt_attached ? 'Yes' : 'No'}
+              </p>
               {r.description && <p className="muted">{r.description}</p>}
-              {r.receipt_url && (
-                <p><a href={r.receipt_url} target="_blank" rel="noreferrer">View receipt</a></p>
+              {r.receipt_urls && r.receipt_urls.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                  {r.receipt_urls.map((url, i) =>
+                    isImageUrl(url) ? (
+                      <a key={url} href={url} target="_blank" rel="noreferrer">
+                        <img
+                          src={url}
+                          alt={`Receipt ${i + 1}`}
+                          style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }}
+                        />
+                      </a>
+                    ) : (
+                      <a key={url} href={url} target="_blank" rel="noreferrer" className="button" style={{ alignSelf: 'center' }}>
+                        View PDF {r.receipt_urls.length > 1 ? i + 1 : ''}
+                      </a>
+                    )
+                  )}
+                </div>
               )}
               <p className="muted">Submitted {new Date(r.created_at).toLocaleDateString()}</p>
             </div>

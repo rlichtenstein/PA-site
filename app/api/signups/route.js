@@ -24,6 +24,7 @@ export async function POST(request) {
     const { slot, signup } = await withTransaction(async (client) => {
       const slotResult = await client.query(
         `select id, title, category, capacity, location, start_time, end_time,
+                contact_name, contact_email, contact_phone,
                 event_date::text as event_date, (event_date < current_date) as is_past
          from slots where id = $1 for update`,
         [slot_id]

@@ -7,11 +7,15 @@ export default function ReimbursementPage() {
     parent_name: '',
     parent_email: '',
     parent_phone: '',
+    address: '',
     activity: '',
     amount: '',
+    expense_date: '',
     description: '',
+    receipt_attached: false,
+    delivery_method: '',
   });
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -23,7 +27,7 @@ export default function ReimbursementPage() {
     try {
       const body = new FormData();
       Object.entries(form).forEach(([k, v]) => body.append(k, v));
-      if (file) body.append('receipt', file);
+      files.forEach((f) => body.append('receipts', f));
 
       const res = await fetch('/api/reimbursements', { method: 'POST', body });
       const data = await res.json();
@@ -52,7 +56,7 @@ export default function ReimbursementPage() {
   return (
     <div className="card">
       <h2>Reimbursement Request</h2>
-      <p className="muted">Paid out of pocket for a PA activity? Submit your receipt here.</p>
+      <p className="muted">Paid out of pocket for a PA activity? Submit your receipt(s) here.</p>
 
       <form onSubmit={handleSubmit}>
         <label htmlFor="parent_name">Your name</label>
@@ -79,6 +83,15 @@ export default function ReimbursementPage() {
           onChange={(e) => setForm({ ...form, parent_phone: e.target.value })}
         />
 
+        <label htmlFor="address">Mailing address</label>
+        <input
+          id="address"
+          required
+          placeholder="Street, city, state, zip"
+          value={form.address}
+          onChange={(e) => setForm({ ...form, address: e.target.value })}
+        />
+
         <label htmlFor="activity">Activity / event</label>
         <input
           id="activity"
@@ -99,6 +112,15 @@ export default function ReimbursementPage() {
           onChange={(e) => setForm({ ...form, amount: e.target.value })}
         />
 
+        <label htmlFor="expense_date">Date of expense</label>
+        <input
+          id="expense_date"
+          type="date"
+          required
+          value={form.expense_date}
+          onChange={(e) => setForm({ ...form, expense_date: e.target.value })}
+        />
+
         <label htmlFor="description">Description (optional)</label>
         <textarea
           id="description"
@@ -107,14 +129,50 @@ export default function ReimbursementPage() {
           onChange={(e) => setForm({ ...form, description: e.target.value })}
         />
 
-        <label htmlFor="receipt">Receipt (JPG, PNG, or PDF)</label>
+        <label htmlFor="receipts">Receipt(s) — JPG, PNG, or PDF, multiple allowed</label>
         <input
-          id="receipt"
+          id="receipts"
           type="file"
+          multiple
           accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
-          required
-          onChange={(e) => setFile(e.target.files[0])}
+          onChange={(e) => setFiles(Array.from(e.target.files))}
         />
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'normal' }}>
+          <input
+            type="checkbox"
+            style={{ width: 'auto' }}
+            checked={form.receipt_attached}
+            onChange={(e) => setForm({ ...form, receipt_attached: e.target.checked })}
+          />
+          Receipt attached
+        </label>
+
+        <label>How would you like to receive your reimbursement?</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'normal' }}>
+            <input
+              type="radio"
+              name="delivery_method"
+              style={{ width: 'auto' }}
+              required
+              checked={form.delivery_method === 'mail_check'}
+              onChange={() => setForm({ ...form, delivery_method: 'mail_check' })}
+            />
+            Mail me my check
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'normal' }}>
+            <input
+              type="radio"
+              name="delivery_method"
+              style={{ width: 'auto' }}
+              required
+              checked={form.delivery_method === 'pickup_business_office'}
+              onChange={() => setForm({ ...form, delivery_method: 'pickup_business_office' })}
+            />
+            Hold for pick-up in business office
+          </label>
+        </div>
 
         {error && <p className="error-text">{error}</p>}
 

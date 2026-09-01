@@ -13,13 +13,17 @@ const emptyForm = {
   end_time: '',
   location: '',
   capacity: 1,
+  contact_name: '',
+  contact_email: '',
+  contact_phone: '',
 };
 
 export default function AdminSlots() {
   const [slots, setSlots] = useState(null);
   const [error, setError] = useState('');
   const [form, setForm] = useState(emptyForm);
-  const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [signups, setSignups] = useState({});
 
@@ -38,24 +42,68 @@ export default function AdminSlots() {
     load();
   }, []);
 
-  async function handleCreate(e) {
+  function startEdit(slot) {
+    setEditingId(slot.id);
+    setForm({
+      title: slot.title,
+      category: slot.category,
+      description: slot.description || '',
+      event_date: slot.event_date,
+      start_time: slot.start_time ? slot.start_time.slice(0, 5) : '',
+      end_time: slot.end_time ? slot.end_time.slice(0, 5) : '',
+      location: slot.location || '',
+      capacity: slot.capacity,
+      contact_name: slot.contact_name || '',
+      contact_email: slot.contact_email || '',
+      contact_phone: slot.contact_phone || '',
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function startClone(slot) {
+    setEditingId(null);
+    setForm({
+      title: slot.title,
+      category: slot.category,
+      description: slot.description || '',
+      event_date: '',
+      start_time: slot.start_time ? slot.start_time.slice(0, 5) : '',
+      end_time: slot.end_time ? slot.end_time.slice(0, 5) : '',
+      location: slot.location || '',
+      capacity: slot.capacity,
+      contact_name: slot.contact_name || '',
+      contact_email: slot.contact_email || '',
+      contact_phone: slot.contact_phone || '',
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm(emptyForm);
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault();
-    setCreating(true);
+    setSaving(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/slots', {
-        method: 'POST',
+      const url = editingId ? `/api/admin/slots/${editingId}` : '/api/admin/slots';
+      const method = editingId ? 'PATCH' : 'POST';
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, capacity: Number(form.capacity) }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create slot.');
+      if (!res.ok) throw new Error(data.error || 'Failed to save slot.');
       setForm(emptyForm);
+      setEditingId(null);
       load();
     } catch (err) {
       setError(err.message);
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
   }
 
@@ -88,8 +136,8 @@ export default function AdminSlots() {
   return (
     <div>
       <div className="card">
-        <h3>Add a new slot</h3>
-        <form onSubmit={handleCreate}>
+        <h3>{editingId ? 'Edit slot' : 'Add a new slot'}</h3>
+        <form onSubmit={handleSubmit}>
           <label>Title</label>
           <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
 
@@ -118,10 +166,26 @@ export default function AdminSlots() {
           <label>Capacity (number of volunteers needed)</label>
           <input type="number" min="1" required value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
 
+          <label>Organizer name (who parents contact with questions)</label>
+          <input required value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} />
+
+          <label>Organizer email</label>
+          <input type="email" required value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} />
+
+          <label>Organizer phone (optional)</label>
+          <input value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} />
+
           {error && <p className="error-text">{error}</p>}
 
-          <div className="form-actions">
-            <button type="submit" disabled={creating}>{creating ? 'Adding...' : 'Add Slot'}</button>
+          <div className="form-actions" style={{ display: 'flex', gap: '0.5rem' }}>
+            <button type="submit" disabled={saving}>
+              {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Add Slot'}
+            </button>
+            {editingId && (
+              <button type="button" className="secondary" onClick={cancelEdit}>
+                Cancel Edit
+              </button>
+            )}
           </div>
         </form>
       </div>
@@ -137,15 +201,24 @@ export default function AdminSlots() {
               <p className="slot-meta">
                 {slot.event_date} {slot.start_time ? `• ${slot.start_time}` : ''} {slot.location ? `• ${slot.location}` : ''}
               </p>
+              {slot.contact_name && (
+                <p className="muted">
+                  Organizer: {slot.contact_name}
+                  {slot.contact_email ? ` • ${slot.contact_email}` : ''}
+                  {slot.contact_phone ? ` • ${slot.contact_phone}` : ''}
+                </p>
+              )}
             </div>
             <div style={{ textAlign: 'right' }}>
               <span className={`badge ${slot.open_spots <= 0 ? 'full' : ''}`}>
                 {slot.filled}/{slot.capacity} filled
               </span>
-              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <button className="secondary" onClick={() => toggleExpand(slot.id)}>
                   {expanded === slot.id ? 'Hide' : 'View'} Signups
                 </button>
+                <button className="secondary" onClick={() => startEdit(slot)}>Edit</button>
+                <button className="secondary" onClick={() => startClone(slot)}>Clone</button>
                 <button className="danger" onClick={() => handleDelete(slot.id)}>Delete</button>
               </div>
             </div>
