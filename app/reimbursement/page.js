@@ -12,13 +12,24 @@ export default function ReimbursementPage() {
     amount: '',
     expense_date: '',
     description: '',
-    receipt_attached: false,
     delivery_method: '',
   });
   const [files, setFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+
+  function addFiles(newFiles) {
+    setFiles((prev) => {
+      const existingKeys = new Set(prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
+      const toAdd = newFiles.filter((f) => !existingKeys.has(`${f.name}:${f.size}:${f.lastModified}`));
+      return [...prev, ...toAdd];
+    });
+  }
+
+  function removeFile(index) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -129,24 +140,36 @@ export default function ReimbursementPage() {
           onChange={(e) => setForm({ ...form, description: e.target.value })}
         />
 
-        <label htmlFor="receipts">Receipt(s) — JPG, PNG, or PDF, multiple allowed</label>
+        <label htmlFor="receipts">Receipt(s) — JPG, PNG, or PDF</label>
         <input
           id="receipts"
           type="file"
           multiple
           accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
-          onChange={(e) => setFiles(Array.from(e.target.files))}
+          onChange={(e) => {
+            addFiles(Array.from(e.target.files));
+            e.target.value = '';
+          }}
         />
-
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'normal' }}>
-          <input
-            type="checkbox"
-            style={{ width: 'auto' }}
-            checked={form.receipt_attached}
-            onChange={(e) => setForm({ ...form, receipt_attached: e.target.checked })}
-          />
-          Receipt attached
-        </label>
+        <p className="muted" style={{ marginTop: '0.35rem' }}>
+          You can select multiple files at once, or add them one at a time (e.g. a separate photo
+          per receipt) — each selection adds to the list below.
+        </p>
+        {files.length > 0 && (
+          <ul style={{ listStyle: 'none', padding: 0, margin: '0.5rem 0 0' }}>
+            {files.map((f, i) => (
+              <li
+                key={`${f.name}:${f.size}:${f.lastModified}`}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px solid var(--border)' }}
+              >
+                <span>{f.name}</span>
+                <button type="button" className="danger" onClick={() => removeFile(i)} style={{ padding: '0.2rem 0.6rem' }}>
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
 
         <label>How would you like to receive your reimbursement?</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>

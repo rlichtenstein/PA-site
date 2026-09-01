@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withTransaction } from '../../../lib/db';
-import { sendSignupConfirmation } from '../../../lib/email';
+import { sendSignupConfirmation, sendOrganizerSignupNotification } from '../../../lib/email';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -70,6 +70,9 @@ export async function POST(request) {
 
     sendSignupConfirmation({ slot, signup }).catch((err) =>
       console.error('Failed to send signup confirmation email:', err)
+    );
+    sendOrganizerSignupNotification({ slot, signup }).catch((err) =>
+      console.error('Failed to send organizer notification email:', err)
     );
 
     return NextResponse.json({ signup }, { status: 201 });

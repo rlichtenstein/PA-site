@@ -20,7 +20,6 @@ export async function POST(request) {
   const amount = formData.get('amount');
   const expense_date = formData.get('expense_date');
   const description = formData.get('description');
-  const receipt_attached = formData.get('receipt_attached') === 'true';
   const delivery_method = formData.get('delivery_method');
   const files = formData.getAll('receipts').filter((f) => typeof f === 'object' && f.size > 0);
 
@@ -44,8 +43,16 @@ export async function POST(request) {
     return NextResponse.json({ error: `Please attach at most ${MAX_FILES} files.` }, { status: 400 });
   }
 
+  if (files.length > 0 && !process.env.BLOB_READ_WRITE_TOKEN) {
+    console.error('Reimbursement submitted with files but BLOB_READ_WRITE_TOKEN is not set.');
+    return NextResponse.json(
+      { error: 'Receipt uploads are temporarily unavailable. Please try again shortly, or contact the PA treasurer.' },
+      { status: 500 }
+    );
+  }
+
   const receiptUrls = [];
-  if (files.length > 0 && process.env.BLOB_READ_WRITE_TOKEN) {
+  if (files.length > 0) {
     const { put } = await import('@vercel/blob');
     for (const file of files) {
       if (file.size > MAX_FILE_BYTES) {
@@ -63,8 +70,6 @@ export async function POST(request) {
       });
       receiptUrls.push(blob.url);
     }
-  } else if (files.length > 0) {
-    console.warn('BLOB_READ_WRITE_TOKEN not set; skipping receipt file storage.');
   }
 
   const { rows } = await query(
@@ -81,7 +86,7 @@ export async function POST(request) {
       amountNum,
       expense_date,
       description || null,
-      receipt_attached,
+      receiptUrls.length > 0,
       delivery_method,
       receiptUrls,
     ]

@@ -25,8 +25,10 @@ Association: volunteer slot sign-ups and reimbursement requests.
   If `RESEND_API_KEY` is unset, emails are just logged to the console —
   handy for local development.
 - [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) for receipt
-  file storage. If `BLOB_READ_WRITE_TOKEN` is unset, reimbursement requests
-  are still saved, just without an attached file.
+  file storage. A request submitted with no files attached works fine
+  without `BLOB_READ_WRITE_TOKEN` set, but a request that *does* include
+  files is rejected with a clear error if the token is missing, rather
+  than silently dropping the attachment.
 - A daily [Vercel Cron Job](https://vercel.com/docs/cron-jobs) (see
   `vercel.json`) hits `/api/cron/reminders` to send day-before reminder
   emails.
@@ -44,7 +46,8 @@ npm run dev                  # http://localhost:3000
 ```
 
 You don't need Resend or Vercel Blob configured to develop locally — emails
-print to the console and reimbursements save without a receipt file.
+print to the console, and reimbursements with no files attached save fine
+(one with files attached will error until `BLOB_READ_WRITE_TOKEN` is set).
 
 ## Deploying to Vercel
 
