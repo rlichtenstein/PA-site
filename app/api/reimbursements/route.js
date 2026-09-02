@@ -73,7 +73,7 @@ export async function POST(request) {
       const { put } = await import('@vercel/blob');
       for (const file of files) {
         const blob = await put(`receipts/${Date.now()}-${file.name}`, file, {
-          access: 'public',
+          access: 'private',
           addRandomSuffix: true,
         });
         receiptUrls.push(blob.url);

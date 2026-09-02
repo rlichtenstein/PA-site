@@ -77,21 +77,22 @@ export default function AdminReimbursements() {
               {r.description && <p className="muted">{r.description}</p>}
               {r.receipt_urls && r.receipt_urls.length > 0 && (
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-                  {r.receipt_urls.map((url, i) =>
-                    isImageUrl(url) ? (
-                      <a key={url} href={url} target="_blank" rel="noreferrer">
+                  {r.receipt_urls.map((url, i) => {
+                    const receiptHref = `/api/admin/reimbursements/${r.id}/receipts/${i}`;
+                    return isImageUrl(url) ? (
+                      <a key={url} href={receiptHref} target="_blank" rel="noreferrer">
                         <img
-                          src={url}
+                          src={receiptHref}
                           alt={`Receipt ${i + 1}`}
                           style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }}
                         />
                       </a>
                     ) : (
-                      <a key={url} href={url} target="_blank" rel="noreferrer" className="button" style={{ alignSelf: 'center' }}>
+                      <a key={url} href={receiptHref} target="_blank" rel="noreferrer" className="button" style={{ alignSelf: 'center' }}>
                         View PDF {r.receipt_urls.length > 1 ? i + 1 : ''}
                       </a>
-                    )
-                  )}
+                    );
+                  })}
                 </div>
               )}
               <p className="muted">Submitted {new Date(r.created_at).toLocaleDateString()}</p>
