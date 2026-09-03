@@ -53,6 +53,13 @@ export default function VolunteerPage() {
     <div>
       <h2>Volunteer Sign-Ups</h2>
       <p className="muted">Pick a slot below and add your name. Spots are first-come, first-served.</p>
+      <p className="muted">
+        📅 Want these on your calendar?{' '}
+        <a href="/api/calendar" target="_blank" rel="noreferrer">
+          Subscribe to all volunteer opportunities
+        </a>{' '}
+        (add this link in Google Calendar, Apple Calendar, or Outlook as a calendar subscription).
+      </p>
 
       {error && <p className="error-text">{error}</p>}
       {!slots && !error && <p className="muted">Loading...</p>}
@@ -72,6 +79,9 @@ export default function VolunteerPage() {
                     {slot.location ? ` • ${slot.location}` : ''}
                   </p>
                   {slot.description && <p className="muted">{slot.description}</p>}
+                  {slot.volunteer_names && slot.volunteer_names.length > 0 && (
+                    <p className="muted">Already signed up: {slot.volunteer_names.join(', ')}</p>
+                  )}
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <span className={`badge ${slot.open_spots <= 0 ? 'full' : ''}`}>

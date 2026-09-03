@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-const CATEGORIES = ['Spirit Wear', 'Winterfest', 'Spring Fair', 'General'];
+const CATEGORIES = ['Spirit Wear', 'Winterfest', 'Spring Fair', 'Used Uniform Exchange', 'General'];
 
 const emptyForm = {
   title: '',
